@@ -1,46 +1,13 @@
-import type { Plugin } from 'vite'
-import type { Rollup } from 'vite'
+import type { Plugin, Rollup } from 'vite'
 import { SystemMessage, HumanMessage } from '@langchain/core/messages'
 import pc from 'picocolors'
-import { model } from '../src/core/llm'
+import { model } from '../../core/llm'
+import type { ViteAiDoctorOptions } from './options'
+import { typeWriter } from './utils'
 
 const NAME = 'vite-plugin-ai-doctor'
 
-// ==================== 工具函数区 ====================
-
-/**
- * 延迟函数
- * @param ms 延迟毫秒数
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
-
-/**
- * 打字机效果输出
- * 使用 process.stdout.write 实现逐字符输出，支持 ANSI 颜色
- * 
- * 为什么使用 process.stdout.write：
- * 1. console.log 会自动添加换行符，无法精确控制输出
- * 2. process.stdout.write 可以逐字符输出，实现打字机效果
- * 3. 可以保留 ANSI 颜色代码，让输出更美观
- * 
- * @param text 要输出的文本（可包含 ANSI 颜色代码）
- * @param speed 每个字符的延迟时间（毫秒），默认 20ms
- */
-async function typeWriter(text: string, speed: number = 20): Promise<void> {
-  for (let i = 0; i < text.length; i++) {
-    process.stdout.write(text[i])
-    // 如果不是最后一个字符，延迟
-    if (i < text.length - 1) {
-      await sleep(speed)
-    }
-  }
-  // 输出结束后自动换行
-  process.stdout.write('\n')
-}
-
-// ==================== 插件主逻辑 ====================
+export * from './options'
 
 /**
  * Vite AI Doctor 插件
@@ -57,7 +24,19 @@ async function typeWriter(text: string, speed: number = 20): Promise<void> {
  * 2. 作为后置插件，可以获取到完整的构建结果和错误信息
  * 3. 即使构建失败，也能正常执行诊断逻辑
  */
-export default function vitePluginAiDoctor(): Plugin {
+export default function vitePluginAiDoctor(options: ViteAiDoctorOptions = {}): Plugin {
+  const {
+    enabled = true,
+    typeWriterSpeed = 20,
+    showOriginalError = true,
+  } = options
+
+  if (!enabled) {
+    return {
+      name: NAME,
+    }
+  }
+
   return {
     name: NAME,
     enforce: 'post', // 后置执行，确保在其他插件之后运行
@@ -87,7 +66,7 @@ export default function vitePluginAiDoctor(): Plugin {
 
         // 2. 输出黄色提示（AI 正在分析）
         const analyzing = pc.yellow('🤖 AI 正在分析构建错误，请稍候...')
-        await typeWriter(analyzing, 20)
+        await typeWriter(analyzing, typeWriterSpeed)
         process.stdout.write('\n')
 
         // 3. 构造 errorContext（message / stack / id）
@@ -133,7 +112,7 @@ ${errorContext.stack}
         process.stdout.write('\n')
         await typeWriter(pc.cyan('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'), 5)
         process.stdout.write('\n')
-        await typeWriter(pc.bold(pc.green('💡 AI 诊断建议：')), 20)
+        await typeWriter(pc.bold(pc.green('💡 AI 诊断建议：')), typeWriterSpeed)
         process.stdout.write('\n')
         await typeWriter(pc.cyan('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'), 5)
         process.stdout.write('\n')
@@ -141,13 +120,13 @@ ${errorContext.stack}
         // 逐行输出 AI 响应，保持格式
         const lines = aiResponse.split('\n')
         for (const line of lines) {
-          await typeWriter(pc.white(line), 15)
+          await typeWriter(pc.white(line), typeWriterSpeed)
         }
         
         process.stdout.write('\n')
         await typeWriter(pc.cyan('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'), 5)
         process.stdout.write('\n')
-        await typeWriter(pc.dim('诊断完成，请根据上述建议修复错误。'), 20)
+        await typeWriter(pc.dim('诊断完成，请根据上述建议修复错误。'), typeWriterSpeed)
         process.stdout.write('\n')
 
       } catch (aiError) {
@@ -155,25 +134,28 @@ ${errorContext.stack}
         process.stdout.write('\n')
         await typeWriter(pc.red('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'), 5)
         process.stdout.write('\n')
-        await typeWriter(pc.red('❌ AI 诊断服务调用失败'), 20)
+        await typeWriter(pc.red('❌ AI 诊断服务调用失败'), typeWriterSpeed)
         process.stdout.write('\n')
-        await typeWriter(pc.yellow('请检查：'), 20)
+        await typeWriter(pc.yellow('请检查：'), typeWriterSpeed)
         process.stdout.write('\n')
-        await typeWriter(pc.dim('  1. 本地大模型服务是否已启动（如 Ollama）'), 20)
+        await typeWriter(pc.dim('  1. 本地大模型服务是否已启动（如 Ollama）'), typeWriterSpeed)
         process.stdout.write('\n')
-        await typeWriter(pc.dim('  2. 模型配置是否正确'), 20)
+        await typeWriter(pc.dim('  2. 模型配置是否正确'), typeWriterSpeed)
         process.stdout.write('\n')
-        await typeWriter(pc.dim('  3. 网络连接是否正常'), 20)
+        await typeWriter(pc.dim('  3. 网络连接是否正常'), typeWriterSpeed)
         process.stdout.write('\n')
         
         // 输出原始错误信息作为备选
-        await typeWriter(pc.yellow('原始错误信息：'), 20)
-        process.stdout.write('\n')
-        await typeWriter(pc.red(error.message), 15)
-        if (error.stack) {
-          await typeWriter(pc.dim(error.stack), 10)
+        if (showOriginalError) {
+          await typeWriter(pc.yellow('原始错误信息：'), typeWriterSpeed)
+          process.stdout.write('\n')
+          await typeWriter(pc.red(error.message), 15)
+          if (error.stack) {
+            await typeWriter(pc.dim(error.stack), 10)
+          }
+          process.stdout.write('\n')
         }
-        process.stdout.write('\n')
+        
         await typeWriter(pc.red('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'), 5)
         process.stdout.write('\n')
       }

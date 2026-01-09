@@ -47,14 +47,24 @@ export const model = new ChatOpenAI({
 
 ```ts
 import { defineConfig } from 'vite'
-import vitePluginAiDoctor from './vite-plugin-ai-doctor'
+import vitePluginAiDoctor from 'vite-plugin-ai-doctor'
 
 export default defineConfig({
   plugins: [
-    vitePluginAiDoctor(),
+    vitePluginAiDoctor({
+      enabled: true,              // 是否启用插件，默认 true
+      typeWriterSpeed: 20,        // 打字机效果速度（毫秒），默认 20
+      showOriginalError: true,    // AI 调用失败时是否显示原始错误，默认 true
+    }),
   ],
 })
 ```
+
+### 选项说明
+
+- `enabled`: 是否启用插件，默认 `true`
+- `typeWriterSpeed`: 打字机效果每个字符的延迟时间（毫秒），默认 `20`
+- `showOriginalError`: 当 AI 调用失败时，是否显示原始错误信息，默认 `true`
 
 ## 工作原理
 
@@ -106,6 +116,25 @@ export default defineConfig({
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 诊断完成，请根据上述建议修复错误。
 ```
+
+## 测试 Playground
+
+项目包含一个 playground 目录，用于测试插件功能：
+
+```bash
+cd playground
+pnpm install
+pnpm build  # 正常构建测试
+```
+
+要测试错误诊断功能，可以：
+
+1. 编辑 `playground/src/test-error.ts`，取消注释错误代码
+2. 在 `playground/src/main.ts` 中导入该文件
+3. 运行 `pnpm build` 触发构建错误
+4. 观察插件自动调用 AI 进行诊断
+
+详细说明请查看 [playground/README.md](./playground/README.md)
 
 ## License
 
