@@ -1,0 +1,36 @@
+{
+  "name": "vite-plugin-ai-doctor",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "AI-powered error diagnosis plugin for Vite builds",
+  "main": "./vite-plugin-ai-doctor.ts",
+  "types": "./vite-plugin-ai-doctor.ts",
+  "exports": {
+    ".": {
+      "types": "./vite-plugin-ai-doctor.ts",
+      "import": "./vite-plugin-ai-doctor.ts"
+    }
+  },
+  "keywords": [
+    "vite",
+    "vite-plugin",
+    "ai",
+    "diagnosis",
+    "error",
+    "build"
+  ],
+  "author": "",
+  "license": "MIT",
+  "peerDependencies": {
+    "vite": "^5.0.0 || ^6.0.0"
+  },
+  "dependencies": {
+    "@langchain/core": "^0.3.0",
+    "picocolors": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
+
