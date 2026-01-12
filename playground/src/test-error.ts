@@ -5,7 +5,7 @@
  */
 
 // 取消下面的注释来测试构建错误
-// import { something } from './non-existent-file'
+import { something } from './non-existent-file'
 
 export const testError = 'Uncomment the import above to test build errors'
 

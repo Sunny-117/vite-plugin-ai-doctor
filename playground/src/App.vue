@@ -33,6 +33,8 @@
 <script setup lang="ts">
 // 正常代码，不会导致构建错误
 console.log('Vite Plugin AI Doctor Playground')
+import {num} from './error-exampl1e'
+console.log(num)
 </script>
 
 <style scoped>

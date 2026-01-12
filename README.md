@@ -2,6 +2,8 @@
 
 🚨 AI 驱动的 Vite 构建错误诊断插件
 
+<img src="demo.gif" />
+
 ## 功能特性
 
 - 🤖 构建失败时自动调用 AI 进行错误诊断
@@ -15,35 +17,38 @@
 pnpm add -D vite-plugin-ai-doctor
 ```
 
-## 配置模型
+## 安装模型依赖
 
-在 `src/core/llm.ts` 中配置你的本地大模型：
+根据你使用的模型提供商，安装对应的依赖：
 
-### 使用 Ollama
+### 智谱AI (ZhipuAI)
 
-```ts
-import { ChatOllama } from '@langchain/ollama'
+**无需额外安装依赖！** 插件直接通过 HTTP API 调用智谱AI，无需安装任何额外的包。
 
-export const model = new ChatOllama({
-  model: 'llama3',
-  baseUrl: 'http://localhost:11434',
-})
+只需要：
+1. 在 [智谱开放平台](https://open.bigmodel.cn/) 注册账号
+2. 获取 API Key
+3. 在插件配置中传入 API Key 即可
+
+### OpenAI
+
+```bash
+pnpm add @langchain/openai
 ```
 
-### 使用 OpenAI
+### Ollama (本地模型)
 
-```ts
-import { ChatOpenAI } from '@langchain/openai'
-
-export const model = new ChatOpenAI({
-  modelName: 'gpt-4',
-  temperature: 0.7,
-})
+```bash
+pnpm add @langchain/ollama
 ```
 
 ## 使用方法
 
-在 `vite.config.ts` 中引入插件：
+在 `vite.config.ts` 中引入插件并配置模型：
+
+### 使用智谱AI（推荐）
+
+智谱AI无需安装额外依赖，直接通过 HTTP API 调用，使用最简单：
 
 ```ts
 import { defineConfig } from 'vite'
@@ -52,9 +57,86 @@ import vitePluginAiDoctor from 'vite-plugin-ai-doctor'
 export default defineConfig({
   plugins: [
     vitePluginAiDoctor({
-      enabled: true,              // 是否启用插件，默认 true
-      typeWriterSpeed: 20,        // 打字机效果速度（毫秒），默认 20
-      showOriginalError: true,    // AI 调用失败时是否显示原始错误，默认 true
+      model: {
+        provider: 'zhipuai',
+        apiKey: process.env.ZHIPUAI_API_KEY!, // 从环境变量读取，必填
+        model: 'glm-4', // 可选，支持 'glm-4', 'glm-4.7', 'glm-4.6v' 等，默认 'glm-4'
+        baseURL: 'https://open.bigmodel.cn/api/paas/v4', // 可选，默认值
+        temperature: 0.7, // 可选，控制输出随机性，默认 0.7
+      },
+      typeWriterSpeed: 20,
+    }),
+  ],
+})
+```
+
+**获取智谱AI API Key：**
+1. 访问 [智谱开放平台](https://open.bigmodel.cn/)
+2. 注册/登录账号
+3. 在个人中心创建 API Key
+4. 将 API Key 设置为环境变量：`export ZHIPUAI_API_KEY=your-api-key`
+
+### 使用 OpenAI
+
+```ts
+import { defineConfig } from 'vite'
+import vitePluginAiDoctor from 'vite-plugin-ai-doctor'
+
+export default defineConfig({
+  plugins: [
+    vitePluginAiDoctor({
+      model: {
+        provider: 'openai',
+        apiKey: process.env.OPENAI_API_KEY!, // 从环境变量读取
+        model: 'gpt-4', // 可选，默认 'gpt-4'
+        temperature: 0.7, // 可选
+      },
+    }),
+  ],
+})
+```
+
+### 使用 Ollama (本地模型)
+
+```ts
+import { defineConfig } from 'vite'
+import vitePluginAiDoctor from 'vite-plugin-ai-doctor'
+
+export default defineConfig({
+  plugins: [
+    vitePluginAiDoctor({
+      model: {
+        provider: 'ollama',
+        model: 'llama3', // 必需
+        baseURL: 'http://localhost:11434', // 可选，默认 'http://localhost:11434'
+        temperature: 0.7, // 可选
+      },
+    }),
+  ],
+})
+```
+
+### 使用自定义模型实例
+
+如果你已经有 LangChain 模型实例，可以直接传入：
+
+```ts
+import { defineConfig } from 'vite'
+import vitePluginAiDoctor from 'vite-plugin-ai-doctor'
+import { ChatOpenAI } from '@langchain/openai'
+
+const customModel = new ChatOpenAI({
+  openAIApiKey: 'your-key',
+  modelName: 'gpt-4',
+})
+
+export default defineConfig({
+  plugins: [
+    vitePluginAiDoctor({
+      model: {
+        provider: 'custom',
+        model: customModel,
+      },
     }),
   ],
 })
@@ -62,6 +144,12 @@ export default defineConfig({
 
 ### 选项说明
 
+- `model` (必需): 模型配置对象
+  - `provider`: 模型提供商，支持 `'zhipuai'` | `'openai'` | `'ollama'` | `'custom'`
+  - 智谱AI: `apiKey` (必需), `model` (可选), `baseURL` (可选), `temperature` (可选)
+  - OpenAI: `apiKey` (必需), `model` (可选), `baseURL` (可选), `temperature` (可选)
+  - Ollama: `model` (必需), `baseURL` (可选), `temperature` (可选)
+  - Custom: `model` (必需，LangChain 模型实例)
 - `enabled`: 是否启用插件，默认 `true`
 - `typeWriterSpeed`: 打字机效果每个字符的延迟时间（毫秒），默认 `20`
 - `showOriginalError`: 当 AI 调用失败时，是否显示原始错误信息，默认 `true`
@@ -70,8 +158,27 @@ export default defineConfig({
 
 1. **触发时机**：使用 `buildEnd(error)` Hook，仅在构建失败时执行
 2. **错误捕获**：收集错误信息（message、stack、id）
-3. **AI 诊断**：调用本地大模型进行错误分析
+3. **AI 诊断**：根据配置的模型提供商，动态加载对应的 LangChain 包并调用模型进行错误分析
 4. **结果输出**：以打字机效果输出诊断建议
+
+## 环境变量
+
+建议使用环境变量来存储 API Key，避免将敏感信息提交到代码仓库：
+
+```bash
+# .env
+ZHIPUAI_API_KEY=your-api-key-here
+OPENAI_API_KEY=your-api-key-here
+```
+
+然后在 `vite.config.ts` 中使用：
+
+```ts
+model: {
+  provider: 'zhipuai',
+  apiKey: process.env.ZHIPUAI_API_KEY!,
+}
+```
 
 ## 技术细节
 

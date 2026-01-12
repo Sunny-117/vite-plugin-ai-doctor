@@ -68,9 +68,26 @@ pnpm build
    })
    ```
 
+## 配置模型
+
+在 `vite.config.ts` 中配置你选择的模型。推荐使用智谱AI（无需额外依赖）：
+
+### 使用智谱AI（推荐）
+
+1. 在 [智谱开放平台](https://open.bigmodel.cn/) 注册并获取 API Key
+2. 设置环境变量：
+   ```bash
+   export ZHIPUAI_API_KEY=your-api-key
+   ```
+3. 在 `vite.config.ts` 中已配置好智谱AI（默认配置）
+
+### 使用其他模型
+
+参考主项目 README 配置 OpenAI 或 Ollama。
+
 ## 测试步骤
 
-1. 确保已配置好 LLM 模型（见主项目 README）
+1. 确保已配置好 LLM 模型（推荐使用智谱AI）
 2. 创建一个会导致构建错误的代码
 3. 运行 `pnpm build`
 4. 观察插件是否自动触发 AI 诊断
@@ -86,7 +103,10 @@ pnpm build
 
 ## 注意事项
 
-- 确保本地 LLM 服务已启动（如 Ollama）
+- **智谱AI**：无需额外依赖，只需配置 API Key 即可使用
+- **Ollama**：需要安装 `@langchain/ollama` 并启动本地服务
+- **OpenAI**：需要安装 `@langchain/openai` 并配置 API Key
 - 如果 AI 调用失败，插件会显示友好的错误提示
 - 插件不会影响正常的构建流程
+- 建议使用环境变量存储 API Key，不要硬编码在配置文件中
 

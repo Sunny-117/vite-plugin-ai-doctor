@@ -5,10 +5,10 @@
  */
 
 // 示例 1: 导入不存在的模块
-// import { nonExistentModule } from './non-existent-module'
+import { nonExistentModule } from './non-existent-module'
 
 // 示例 2: TypeScript 类型错误
-// const num: number = 'this is a string' // 类型错误
+export const num: number = 'this is a string' // 类型错误
 
 // 示例 3: 语法错误
 // const invalid = { // 缺少闭合括号

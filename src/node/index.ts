@@ -1,8 +1,8 @@
 import type { Plugin, Rollup } from 'vite'
 import { SystemMessage, HumanMessage } from '@langchain/core/messages'
 import pc from 'picocolors'
-import { model } from '../../core/llm'
 import type { ViteAiDoctorOptions } from './options'
+import { createModel } from './model-factory'
 import { typeWriter } from './utils'
 
 const NAME = 'vite-plugin-ai-doctor'
@@ -24,17 +24,35 @@ export * from './options'
  * 2. 作为后置插件，可以获取到完整的构建结果和错误信息
  * 3. 即使构建失败，也能正常执行诊断逻辑
  */
-export default function vitePluginAiDoctor(options: ViteAiDoctorOptions = {}): Plugin {
+export default function vitePluginAiDoctor(options: ViteAiDoctorOptions): Plugin {
   const {
     enabled = true,
     typeWriterSpeed = 20,
     showOriginalError = true,
+    model: modelConfig,
   } = options
+
+  // 验证必需配置
+  if (!modelConfig) {
+    throw new Error(
+      'vite-plugin-ai-doctor: model configuration is required. ' +
+      'Please provide model config in plugin options.'
+    )
+  }
 
   if (!enabled) {
     return {
       name: NAME,
     }
+  }
+
+  // 预先创建模型实例（延迟初始化，避免在插件加载时立即创建）
+  let modelInstance: Promise<any> | null = null
+  const getModel = async () => {
+    if (!modelInstance) {
+      modelInstance = createModel(modelConfig)
+    }
+    return modelInstance
   }
 
   return {
@@ -51,7 +69,7 @@ export default function vitePluginAiDoctor(options: ViteAiDoctorOptions = {}): P
      * 3. 避免 AI 调用失败导致插件崩溃，影响构建流程
      * 4. 提供友好的错误提示，引导用户检查模型配置
      */
-    async buildEnd(error: Rollup.RollupError | Error | null) {
+    async buildEnd(error?: Rollup.RollupError | Error) {
       // 如果没有错误，直接返回
       if (!error) {
         return
@@ -97,7 +115,8 @@ ${errorContext.id}
 ${errorContext.stack}
 `
 
-        // 5. 调用 model.invoke
+        // 5. 获取模型实例并调用
+        const model = await getModel()
         const messages = [
           new SystemMessage(systemPrompt),
           new HumanMessage(userPrompt),
@@ -138,12 +157,42 @@ ${errorContext.stack}
         process.stdout.write('\n')
         await typeWriter(pc.yellow('请检查：'), typeWriterSpeed)
         process.stdout.write('\n')
-        await typeWriter(pc.dim('  1. 本地大模型服务是否已启动（如 Ollama）'), typeWriterSpeed)
-        process.stdout.write('\n')
-        await typeWriter(pc.dim('  2. 模型配置是否正确'), typeWriterSpeed)
-        process.stdout.write('\n')
-        await typeWriter(pc.dim('  3. 网络连接是否正常'), typeWriterSpeed)
-        process.stdout.write('\n')
+        
+        // 根据模型类型提供不同的错误提示
+        const provider = modelConfig.provider
+        if (provider === 'ollama') {
+          await typeWriter(pc.dim('  1. Ollama 服务是否已启动（运行 ollama serve）'), typeWriterSpeed)
+          process.stdout.write('\n')
+          await typeWriter(pc.dim('  2. 模型是否已下载（运行 ollama pull <model>）'), typeWriterSpeed)
+          process.stdout.write('\n')
+          await typeWriter(pc.dim('  3. 是否安装了 @langchain/ollama 包'), typeWriterSpeed)
+          process.stdout.write('\n')
+        } else if (provider === 'zhipuai') {
+          await typeWriter(pc.dim('  1. API Key 是否正确（检查环境变量或配置）'), typeWriterSpeed)
+          process.stdout.write('\n')
+          await typeWriter(pc.dim('  2. 网络连接是否正常（需要访问 open.bigmodel.cn）'), typeWriterSpeed)
+          process.stdout.write('\n')
+          await typeWriter(pc.dim('  3. 模型名称是否正确（如 glm-4, glm-4.7 等）'), typeWriterSpeed)
+          process.stdout.write('\n')
+        } else if (provider === 'openai') {
+          await typeWriter(pc.dim('  1. API Key 是否正确'), typeWriterSpeed)
+          process.stdout.write('\n')
+          await typeWriter(pc.dim('  2. 网络连接是否正常'), typeWriterSpeed)
+          process.stdout.write('\n')
+          await typeWriter(pc.dim('  3. 是否安装了 @langchain/openai 包'), typeWriterSpeed)
+          process.stdout.write('\n')
+        } else {
+          await typeWriter(pc.dim('  1. 模型配置是否正确'), typeWriterSpeed)
+          process.stdout.write('\n')
+          await typeWriter(pc.dim('  2. 网络连接是否正常'), typeWriterSpeed)
+          process.stdout.write('\n')
+        }
+        
+        // 输出具体错误信息
+        if (aiError instanceof Error) {
+          await typeWriter(pc.dim(`  错误详情: ${aiError.message}`), typeWriterSpeed)
+          process.stdout.write('\n')
+        }
         
         // 输出原始错误信息作为备选
         if (showOriginalError) {

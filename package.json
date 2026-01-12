@@ -28,6 +28,18 @@
     "@langchain/core": "^0.3.0",
     "picocolors": "^1.0.0"
   },
+  "peerDependenciesMeta": {
+    "@langchain/openai": {
+      "optional": true
+    },
+    "@langchain/ollama": {
+      "optional": true
+    }
+  },
+  "optionalDependencies": {
+    "@langchain/openai": "*",
+    "@langchain/ollama": "*"
+  },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "typescript": "^5.0.0"
