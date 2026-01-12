@@ -84,10 +84,13 @@ export class ZhipuAIAdapter implements Partial<BaseLanguageModel> {
     messages: BaseMessage[],
     options?: BaseLanguageModelCallOptions
   ): Promise<any> {
+    // 从 options 中提取 temperature（如果存在）
+    const temperature = (options as any)?.temperature ?? this.temperature
+    
     const requestBody: ZhipuAIRequest = {
       model: this.model,
       messages: convertMessages(messages),
-      temperature: options?.temperature ?? this.temperature,
+      temperature,
       stream: false, // 非流式输出
     }
 
@@ -108,7 +111,7 @@ export class ZhipuAIAdapter implements Partial<BaseLanguageModel> {
         )
       }
 
-      const data: ZhipuAIResponse = await response.json()
+      const data = await response.json() as ZhipuAIResponse
 
       if (!data.choices || data.choices.length === 0) {
         throw new Error('ZhipuAI API returned no choices')
