@@ -1,6 +1,6 @@
 # vite-plugin-ai-doctor
 
-🚨 AI 驱动的 Vite 构建错误诊断插件
+🤖 AI 驱动的 Vite 构建错误诊断插件
 
 <img src="demo.gif" />
 
